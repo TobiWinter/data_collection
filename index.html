@@ -149,6 +149,7 @@
                     collector.addDataPoint(now, "accX", acc.x || 0);
                     collector.addDataPoint(now, "accY", acc.y || 0);
                     collector.addDataPoint(now, "accZ", acc.z || 0);
+                    collector.addDataPoint(now, "label", contextVal)
                 } catch (err) {
                     console.log("Error adding data point:", err);
                 }
@@ -184,9 +185,9 @@
                         "f4b5f2cc43c1e124e11cb8505a3d6aff",     // Device/API key
                         "Css Dataset",                          // Dataset name
                         false,                                  // custom timestamps if false
-                        ["accX", "accY", "accZ"],               // Name of the time-series to create in the dataset
+                        ["accX", "accY", "accZ", "label"],               // Name of the time-series to create in the dataset
                         {},                                     // metadata (optional)
-                        contextInput                            // lable
+                        "labeling_label"                        // label
                     );
                     isRecording = true;
                     recordBtn.textContent = "Stop recording";
