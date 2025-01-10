@@ -112,7 +112,7 @@
         // DOM references
         const toggleSensor = document.getElementById('toggleSensor');
         const outputDiv = document.getElementById('output');
-        const contextSelect = document.getElementById('contextSelect'); // <-- New dropdown reference
+        const contextSelect = document.getElementById('contextSelect');
         const apiKeyInput = document.getElementById('apiKey');
         const recordBtn = document.getElementById('recordBtn');
 
@@ -149,12 +149,9 @@
                 acc = { x: 0, y: 0, z: 0 };
             }
 
-            // Use the dropdown value instead of text input
-            const contextVal = contextSelect.value;
-
             // Display sensor data
             outputDiv.textContent =
-                `Context: ${contextVal}\n` +
+                `Context: ${contextSelect.value}\n` +
                 `Acceleration:\n` +
                 `  x = ${acc.x?.toFixed(4)}\n` +
                 `  y = ${acc.y?.toFixed(4)}\n` +
@@ -167,7 +164,6 @@
                     collector.addDataPoint(now, "accX", acc.x || 0);
                     collector.addDataPoint(now, "accY", acc.y || 0);
                     collector.addDataPoint(now, "accZ", acc.z || 0);
-                    collector.addDataPoint(now, "label", contextVal);
                 } catch (err) {
                     console.log("Error adding data point:", err);
                 }
@@ -197,15 +193,16 @@
                 }
 
                 // Create new datasetCollector
+                let label = "activity_" + contextSelect.value
                 try {
                     collector = await datasetCollector(
-                        "https://app.edge-ml.org",    // backend URL
+                        "https://app.edge-ml.org",          // backend URL
                         "f4b5f2cc43c1e124e11cb8505a3d6aff", // Device/API key
-                        "Css Dataset",               // Dataset name
-                        false,                       // custom timestamps if false
-                        ["accX", "accY", "accZ", "label"], // time-series in dataset
-                        {},                          // metadata (optional)
-                        "labeling_label"            // label
+                        "Css Dataset",                      // Dataset name
+                        false,                              // custom timestamps if false
+                        ["accX", "accY", "accZ"],           // time-series in dataset
+                        {},                                 // metadata (optional)
+                        label                               // labeling_label => labeling: "activity", label: "unknown"
                     );
                     isRecording = true;
                     recordBtn.textContent = "Stop recording";
