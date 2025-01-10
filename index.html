@@ -116,32 +116,22 @@
         const apiKeyInput = document.getElementById('apiKey');
         const recordBtn = document.getElementById('recordBtn');
 
-        // Request iOS permission (if needed)
-        function requestOrientationPermission() {
-            DeviceMotionEvent.requestPermission()
-                .then(response => {
-                    if (response == 'granted') {
-                        window.addEventListener('deviceorientation', (e) => {
-                            // handle event
-                        });
-                    }
-                })
-                .catch(console.error);
-        }
-
         // Toggle switch to enable/disable 'devicemotion'
         toggleSensor.addEventListener('change', (event) => {
             if (event.target.checked) {
+                // Request iOS permission (if needed)
                 if (typeof (DeviceMotionEvent.requestPermission) === "function") {
                     DeviceMotionEvent.requestPermission()
                         .then(response => {
                             if (response == "granted") {
                                 window.addEventListener("devicemotion", handleMotionEvent);
+                                isListening = true;
                             }
                         })
                         .catch(console.error);
                 } else {
                     window.addEventListener("devicemotion", handleMotionEvent);
+                    isListening = true;
                 }
             } else {
                 window.removeEventListener('devicemotion', handleMotionEvent);
