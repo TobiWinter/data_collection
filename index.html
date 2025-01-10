@@ -1,195 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <title>DeviceMotion + Edge-ML</title>
-  <style>
-    .switch {
-      position: relative; 
-      display: inline-block; 
-      width: 60px; 
-      height: 34px;
-      margin-left: 10px;
-    }
-    .switch input {
-      opacity: 0; 
-      width: 0; 
-      height: 0;
-    }
-    .slider {
-      position: absolute; 
-      cursor: pointer; 
-      top: 0; 
-      left: 0; 
-      right: 0; 
-      bottom: 0;
-      background-color: #ccc; 
-      transition: .4s;
-    }
-    .slider:before {
-      position: absolute; 
-      content: ""; 
-      height: 26px; 
-      width: 26px; 
-      left: 4px; 
-      bottom: 4px; 
-      background-color: white; 
-      transition: .4s;
-    }
-    input:checked + .slider {
-      background-color: #2196F3;
-    }
-    input:checked + .slider:before {
-      transform: translateX(26px);
-    }
-    .slider.round {
-      border-radius: 34px;
-    }
-    .slider.round:before {
-      border-radius: 50%;
-    }
-    #output {
-      margin-top: 1em;
-      font-family: monospace;
-      white-space: pre-wrap;
-      border: 1px solid #999;
-      padding: 10px;
-      background: #f8f8f8;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <title>DeviceMotion + Edge-ML</title>
+    <style>
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin-left: 10px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        #output {
+            margin-top: 1em;
+            font-family: monospace;
+            white-space: pre-wrap;
+            border: 1px solid #999;
+            padding: 10px;
+            background: #f8f8f8;
+        }
+    </style>
 </head>
+
 <body>
-  <h1>DeviceMotion Sensor + Edge-ML</h1>
+    <h1>DeviceMotion Sensor + Edge-ML</h1>
 
-  <!-- Form with text field for "Context" and a toggle for the sensor -->
-  <div>
-    <label><strong>Context:</strong></label>
-    <input type="text" id="contextInput" placeholder="e.g. walking, sitting, etc." />
-    <label class="switch">
-      <input type="checkbox" id="toggleSensor">
-      <span class="slider round"></span>
-    </label>
-    <span>Enable/Disable Motion Sensor</span>
-  </div>
+    <!-- Form with text field for "Context" and a toggle for the sensor -->
+    <div>
+        <label><strong>Context:</strong></label>
+        <input type="text" id="contextInput" placeholder="e.g. walking, sitting, etc." />
+        <label class="switch">
+            <input type="checkbox" id="toggleSensor">
+            <span class="slider round"></span>
+        </label>
+        <span>Enable/Disable Motion Sensor</span>
+    </div>
 
-  <!-- Edge-ML setup: Provide an API key and a Record/Stop button -->
-  <div style="margin-top: 10px;">
-    <input type="text" id="apiKey" placeholder="Enter your API key" style="width: 240px;" />
-    <button id="recordBtn">Record</button>
-  </div>
+    <!-- Edge-ML setup: Provide an API key and a Record/Stop button -->
+    <div style="margin-top: 10px;">
+        <input type="text" id="apiKey" placeholder="Enter your API key" style="width: 240px;" />
+        <button id="recordBtn">Record</button>
+    </div>
 
-  <!-- Output area for debugging sensor data -->
-  <div id="output">Sensor data will appear here when enabled.</div>
+    <!-- Output area for debugging sensor data -->
+    <div id="output">Sensor data will appear here when enabled.</div>
 
-  <!-- Edge-ML library from CDN -->
-  <script src="https://unpkg.com/edge-ml@4.0.1/dist/index.browser.js"></script>
-  <script>
-    // Expose from edge-ml
-    const sendDataset = edgeML.sendDataset;
-    const datasetCollector = edgeML.datasetCollector;
-    const Predictor = edgeML.Predictor;
-  </script>
+    <!-- Edge-ML library from unpkg -->
+    <script src="https://unpkg.com/edge-ml@4.0.1/dist/index.browser.js"></script>
+    <script>
+        // Expose from edge-ml
+        const datasetCollector = edgeML.datasetCollector;
+    </script>
 
-  <script>
-    // Variables
-    let collector = null;       // datasetCollector instance
-    let isRecording = false;    // Are we actively recording data?
-    let isListening = false;    // Is DeviceMotion event on?
+    <script>
+        // Variables
+        let collector = null;       // datasetCollector instance
+        let isRecording = false;    // Are we actively recording data?
+        let isListening = false;    // Is DeviceMotion event on?
 
-    // DOM references
-    const toggleSensor = document.getElementById('toggleSensor');
-    const outputDiv = document.getElementById('output');
-    const contextInput = document.getElementById('contextInput');
-    const apiKeyInput = document.getElementById('apiKey');
-    const recordBtn = document.getElementById('recordBtn');
+        // DOM references
+        const toggleSensor = document.getElementById('toggleSensor');
+        const outputDiv = document.getElementById('output');
+        const contextInput = document.getElementById('contextInput');
+        const apiKeyInput = document.getElementById('apiKey');
+        const recordBtn = document.getElementById('recordBtn');
 
-    // 1) Toggle switch to enable/disable 'devicemotion'
-    toggleSensor.addEventListener('change', (event) => {
-      if (event.target.checked) {
-        window.addEventListener('devicemotion', handleMotionEvent);
-        isListening = true;
-      } else {
-        window.removeEventListener('devicemotion', handleMotionEvent);
-        isListening = false;
-      }
-    });
+        // Toggle switch to enable/disable 'devicemotion'
+        toggleSensor.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                window.addEventListener('devicemotion', handleMotionEvent);
+                isListening = true;
+            } else {
+                window.removeEventListener('devicemotion', handleMotionEvent);
+                isListening = false;
+            }
+        });
 
-    // 2) DeviceMotion event handler
-    function handleMotionEvent(e) {
-      let acc = e.acceleration;
-      if (!acc || (acc.x === null && acc.y === null && acc.z === null)) {
-        acc = e.accelerationIncludingGravity;
-      }
-      if (!acc) {
-        acc = { x: 0, y: 0, z: 0 };
-      }
+        // DeviceMotion event handler
+        function handleMotionEvent(e) {
+            let acc = e.acceleration;
+            if (!acc || (acc.x === null && acc.y === null && acc.z === null)) {
+                acc = e.accelerationIncludingGravity;
+            }
+            if (!acc) {
+                acc = { x: 0, y: 0, z: 0 };
+            }
 
-      const contextVal = contextInput.value.trim() || "unknown";
+            const contextVal = contextInput.value.trim() || "unknown";
 
-      // Display sensor data
-      outputDiv.textContent =
-        `Context: ${contextVal}\n` +
-        `Acceleration:\n` +
-        `  x = ${acc.x?.toFixed(4)}\n` +
-        `  y = ${acc.y?.toFixed(4)}\n` +
-        `  z = ${acc.z?.toFixed(4)}`;
+            // Display sensor data
+            outputDiv.textContent =
+                `Context: ${contextVal}\n` +
+                `Acceleration:\n` +
+                `  x = ${acc.x?.toFixed(4)}\n` +
+                `  y = ${acc.y?.toFixed(4)}\n` +
+                `  z = ${acc.z?.toFixed(4)}`;
 
-      // If recording, send data to collector
-      if (isRecording && collector) {
-        const now = Date.now(); // custom timestamp
-        try {
-          collector.addDataPoint(now, "accX", acc.x || 0);
-          collector.addDataPoint(now, "accY", acc.y || 0);
-          collector.addDataPoint(now, "accZ", acc.z || 0);
-        } catch (err) {
-          console.log("Error adding data point:", err);
-        }
-      }
-    }
-
-    // 3) Record button click -> start/stop
-    recordBtn.addEventListener('click', async () => {
-      if (isRecording) {
-        // Currently recording -> stop
-        isRecording = false;
-        recordBtn.textContent = "Record"; // Change button text
-
-        if (collector) {
-          try {
-            await collector.onComplete(); // finalize & upload data
-            console.log("Recording stopped, data uploaded.");
-          } catch (err) {
-            console.log("Error finalizing dataset:", err);
-          }
-          collector = null;
-        }
-      } else {
-        // Currently stopped -> start
-        const apiKeyValue = apiKeyInput.value.trim();
-        if (!apiKeyValue) {
-          alert("Please enter a valid API key!");
-          return;
+            // If recording, send data to collector
+            if (isRecording && collector) {
+                const now = Date.now(); // custom timestamp
+                try {
+                    collector.addDataPoint(now, "accX", acc.x || 0);
+                    collector.addDataPoint(now, "accY", acc.y || 0);
+                    collector.addDataPoint(now, "accZ", acc.z || 0);
+                } catch (err) {
+                    console.log("Error adding data point:", err);
+                }
+            }
         }
 
-        // Create new datasetCollector
-        try {
-          collector = await datasetCollector(
-            "https://app.edge-ml.org",    // Your backend URL
-            "f4b5f2cc43c1e124e11cb8505a3d6aff",               // Device/API key
-            "Css Dataset",     // Dataset name
-            false,                     // false => custom timestamps
-            ["accX", "accY", "accZ"],  // Time-series
-            {},                        // metadata (optional)
-            "activity_unknown"         // labeling_label
-          );
-          isRecording = true;
-          recordBtn.textContent = "Stop"; // Change button text
-          console.log("Recording started, collector ready.");
-        } catch (err) {
-          console.log("Error creating collector:", err);
-        }
-      }
-    });
-  </script>
+        // Record button click -> start/stop
+        recordBtn.addEventListener('click', async () => {
+            if (isRecording) {
+                isRecording = false;
+                recordBtn.textContent = "Record";
+
+                if (collector) {
+                    try {
+                        await collector.onComplete(); // finalize & upload data
+                        console.log("Recording stopped, data uploaded.");
+                    } catch (err) {
+                        console.log("Error finalizing dataset:", err);
+                    }
+                    collector = null;
+                }
+            } else {
+                const apiKeyValue = apiKeyInput.value.trim();
+                if (!apiKeyValue) {
+                    alert("Please enter a valid API key!");
+                    return;
+                }
+
+                // Create new datasetCollector
+                try {
+                    collector = await datasetCollector(
+                        "https://app.edge-ml.org",              // backend URL
+                        "f4b5f2cc43c1e124e11cb8505a3d6aff",     // Device/API key
+                        "Css Dataset",                          // Dataset name
+                        false,                                  // custom timestamps if false
+                        ["accX", "accY", "accZ"],               // Name of the time-series to create in the dataset
+                        {},                                     // metadata (optional)
+                        contextInput                            // lable
+                    );
+                    isRecording = true;
+                    recordBtn.textContent = "Stop recording";
+                    console.log("Recording started, collector ready.");
+                } catch (err) {
+                    console.log("Error creating collector:", err);
+                }
+            }
+        });
+    </script>
 </body>
+
 </html>
