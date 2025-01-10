@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>DeviceMotion Sensor Example</title>
+
+    <!-- Basic styling for the toggle switch -->
+    <style>
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Rounded sliders */
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        #output {
+            margin-top: 1em;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>DeviceMotion Sensor Logging</h1>
+
+    <!-- Simple form with one text field for "context" -->
+    <form id="contextForm">
+        <label for="contextInput">Context:</label>
+        <input type="text" id="contextInput" name="context" placeholder="e.g. walking, sitting, etc." />
+    </form>
+
+    <!-- Toggle switch to enable/disable the DeviceMotion listener -->
+    <div style="margin-top: 1em;">
+        <label class="switch">
+            <input type="checkbox" id="toggleSensor">
+            <span class="slider round"></span>
+        </label>
+        <span>Enable/Disable Motion Sensor</span>
+    </div>
+
+    <!-- Output area to display sensor data -->
+    <div id="output">Sensor data will appear here when enabled.</div>
+
+    <!-- Edge-ML JavaScript library (change link to the latest if needed) -->
+    <script src="https://unpkg.com/@edge-ml/javascript@latest/dist/edge-ml.min.js"></script>
+
+    <script>
+        // Replace this with your actual device key from app.edge-ml.org
+        const deviceKey = "a8a7be5f5e7d38bd577fd04e86fb6153";
+
+        // Initialize EdgeML device
+        const device = new EdgeML.Device({ key: deviceKey });
+
+        // A simple flag to track if the listener is active
+        let isListening = false;
+
+        // Grab relevant DOM elements
+        const toggleSensor = document.getElementById('toggleSensor');
+        const outputDiv = document.getElementById('output');
+        const contextInput = document.getElementById('contextInput');
+
+        // Toggle the motion sensor on or off based on the checkbox
+        toggleSensor.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                // Enable listening
+                window.addEventListener('devicemotion', handleMotionEvent);
+                isListening = true;
+            } else {
+                // Disable listening
+                window.removeEventListener('devicemotion', handleMotionEvent);
+                isListening = false;
+            }
+        });
+
+        // Handler for the 'devicemotion' event
+        function handleMotionEvent(e) {
+            // Some browsers only provide 'accelerationIncludingGravity'
+            // Check whichever works best for your device
+            const acc = e.acceleration || e.accelerationIncludingGravity || { x: 0, y: 0, z: 0 };
+
+            // Read the current context value
+            const currentContext = contextInput.value.trim() || "unknown";
+
+            // Show data on the screen (for debugging)
+            outputDiv.textContent =
+                `Context: ${currentContext}\n` +
+                `Acceleration:\n  x=${acc.x?.toFixed(4)}\n  y=${acc.y?.toFixed(4)}\n  z=${acc.z?.toFixed(4)}`;
+
+            // Send data to Edge-ML (You might change 'datasetName' to something meaningful)
+            device.record("css", {
+                context: currentContext,
+                x: acc.x,
+                y: acc.y,
+                z: acc.z,
+                timestamp: Date.now()
+            });
+        }
+    </script>
+</body>
+
+</html>
