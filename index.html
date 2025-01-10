@@ -3,13 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>DeviceMotion + Edge-ML</title>
-
-  <!-- Basic styling for the toggle switch and layout -->
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
     .switch {
       position: relative; 
       display: inline-block; 
@@ -62,17 +56,14 @@
       padding: 10px;
       background: #f8f8f8;
     }
-    .section {
-      margin-bottom: 1em;
-    }
   </style>
 </head>
 <body>
   <h1>DeviceMotion Sensor + Edge-ML</h1>
 
-  <!-- 1) Form with text field for "Context" and a toggle for the sensor -->
-  <div class="section">
-    <label for="contextInput"><strong>Context:</strong></label>
+  <!-- Form with text field for "Context" and a toggle for the sensor -->
+  <div>
+    <label><strong>Context:</strong></label>
     <input type="text" id="contextInput" placeholder="e.g. walking, sitting, etc." />
     <label class="switch">
       <input type="checkbox" id="toggleSensor">
@@ -81,57 +72,50 @@
     <span>Enable/Disable Motion Sensor</span>
   </div>
 
-  <!-- 2) Edge-ML setup: Provide an API key and a Record button -->
-  <div class="section">
+  <!-- Edge-ML setup: Provide an API key and a Record/Stop button -->
+  <div style="margin-top: 10px;">
     <input type="text" id="apiKey" placeholder="Enter your API key" style="width: 240px;" />
-    <button onclick="startStopRecording()">Record</button>
+    <button id="recordBtn">Record</button>
   </div>
 
-  <!-- 3) Output area for debugging sensor data -->
+  <!-- Output area for debugging sensor data -->
   <div id="output">Sensor data will appear here when enabled.</div>
 
-  <!-- 4) Edge-ML library from CDN -->
-  <script src="https://unpkg.com/edge-ml@4.0.1/dist/index.browser.js"></script>
+  <!-- Edge-ML library from CDN -->
+  <script src="https://unpkg.com/edge-ml/dist/bundle.js"></script>
   <script>
-    // Expose functions from the library (based on docs snippet)
-    sendDataset = edgeML.sendDataset;
-    datasetCollector = edgeML.datasetCollector;
-    Predictor = edgeML.Predictor;
+    // Expose from edge-ml
+    const sendDataset = edgeML.sendDataset;
+    const datasetCollector = edgeML.datasetCollector;
+    const Predictor = edgeML.Predictor;
   </script>
 
-  <!-- 5) Your custom script -->
   <script>
     // Variables
-    let collector = null;       // Will hold our datasetCollector instance
-    let isRecording = false;    // Are we actively recording data to Edge-ML?
-    let isListening = false;    // Is DeviceMotion event turned on?
+    let collector = null;       // datasetCollector instance
+    let isRecording = false;    // Are we actively recording data?
+    let isListening = false;    // Is DeviceMotion event on?
 
-    // Grab DOM references
+    // DOM references
     const toggleSensor = document.getElementById('toggleSensor');
     const outputDiv = document.getElementById('output');
     const contextInput = document.getElementById('contextInput');
     const apiKeyInput = document.getElementById('apiKey');
+    const recordBtn = document.getElementById('recordBtn');
 
-    /***************************************************************
-     * 1) Toggle switch to enable/disable 'devicemotion' listener
-     ***************************************************************/
+    // 1) Toggle switch to enable/disable 'devicemotion'
     toggleSensor.addEventListener('change', (event) => {
       if (event.target.checked) {
-        // Enable device motion
         window.addEventListener('devicemotion', handleMotionEvent);
         isListening = true;
       } else {
-        // Disable device motion
         window.removeEventListener('devicemotion', handleMotionEvent);
         isListening = false;
       }
     });
 
-    /***************************************************************
-     * 2) Handle the 'devicemotion' event
-     ***************************************************************/
+    // 2) DeviceMotion event handler
     function handleMotionEvent(e) {
-      // In some browsers, 'acceleration' can be null, so fallback to 'accelerationIncludingGravity'
       let acc = e.acceleration;
       if (!acc || (acc.x === null && acc.y === null && acc.z === null)) {
         acc = e.accelerationIncludingGravity;
@@ -140,22 +124,19 @@
         acc = { x: 0, y: 0, z: 0 };
       }
 
-      // Read context from the form
-      const context = contextInput.value.trim() || "unknown";
+      const contextVal = contextInput.value.trim() || "unknown";
 
-      // Show data for debugging
+      // Display sensor data
       outputDiv.textContent =
-        `Context: ${context}\n` +
+        `Context: ${contextVal}\n` +
         `Acceleration:\n` +
         `  x = ${acc.x?.toFixed(4)}\n` +
         `  y = ${acc.y?.toFixed(4)}\n` +
         `  z = ${acc.z?.toFixed(4)}`;
 
-      // If currently recording, add data to our collector
+      // If recording, send data to collector
       if (isRecording && collector) {
-        const now = Date.now(); // Unix time in ms
-
-        // We have to pass 3 arguments for collector.addDataPoint(timestamp, sensorName, value)
+        const now = Date.now(); // custom timestamp
         try {
           collector.addDataPoint(now, "accX", acc.x || 0);
           collector.addDataPoint(now, "accY", acc.y || 0);
@@ -166,16 +147,16 @@
       }
     }
 
-    /***************************************************************
-     * 3) Start/Stop recording to Edge-ML
-     ***************************************************************/
-    async function startStopRecording() {
+    // 3) Record button click -> start/stop
+    recordBtn.addEventListener('click', async () => {
       if (isRecording) {
-        // Stop the recording => finalize and upload
+        // Currently recording -> stop
         isRecording = false;
+        recordBtn.textContent = "Record"; // Change button text
+
         if (collector) {
           try {
-            await collector.onComplete(); // sends remaining data
+            await collector.onComplete(); // finalize & upload data
             console.log("Recording stopped, data uploaded.");
           } catch (err) {
             console.log("Error finalizing dataset:", err);
@@ -183,31 +164,32 @@
           collector = null;
         }
       } else {
-        // Start recording => create a new collector
+        // Currently stopped -> start
         const apiKeyValue = apiKeyInput.value.trim();
         if (!apiKeyValue) {
           alert("Please enter a valid API key!");
           return;
         }
+
+        // Create new datasetCollector
         try {
-          // create a new collector:
-          // datasetCollector(backendUrl, apiKey, datasetName, useBrowserTime, timeSeries, metadata, labeling_label)
           collector = await datasetCollector(
-            "https://app.edge-ml.org",    // 1) Your Edge-ML backend URL
-            "f4b5f2cc43c1e124e11cb8505a3d6aff",               // 2) The device/API key (from input)
-            "css",     // 3) A dataset name (your choice)
-            false,                     // 4) false => we provide our own timestamps
-            ["accX", "accY", "accZ"],  // 5) The time series we collect
-            {},                        // 6) metadata (optional)
-            "activity_unknown"         // 7) labeling_label => labeling: "activity", label: "unknown"
+            "https://app.edge-ml.org",    // Your backend URL
+            "f4b5f2cc43c1e124e11cb8505a3d6aff",               // Device/API key
+            "Css Dataset",     // Dataset name
+            false,                     // false => custom timestamps
+            ["accX", "accY", "accZ"],  // Time-series
+            {},                        // metadata (optional)
+            "activity_unknown"         // labeling_label
           );
           isRecording = true;
+          recordBtn.textContent = "Stop"; // Change button text
           console.log("Recording started, collector ready.");
         } catch (err) {
           console.log("Error creating collector:", err);
         }
       }
-    }
+    });
   </script>
 </body>
 </html>
