@@ -111,11 +111,28 @@
         const apiKeyInput = document.getElementById('apiKey');
         const recordBtn = document.getElementById('recordBtn');
 
+        // Request 
+        function requestOrientationPermission() {
+            DeviceMotionEvent.requestPermission()
+                .then(response => {
+                    if (response == 'granted') {
+                        window.addEventListener('deviceorientation', (e) => {
+                            // do something with e
+                        })
+                    }
+                })
+                .catch(console.error)
+        }
+
         // Toggle switch to enable/disable 'devicemotion'
         toggleSensor.addEventListener('change', (event) => {
             if (event.target.checked) {
-                window.addEventListener('devicemotion', handleMotionEvent);
-                isListening = true;
+                DeviceMotionEvent.requestPermission().then(response => {
+                    if (response == 'granted') {
+                        window.addEventListener('deviceorientation', handleMotionEvent);
+                        isListening = true;
+                    }
+                }).catch(console.error)
             } else {
                 window.removeEventListener('devicemotion', handleMotionEvent);
                 isListening = false;
