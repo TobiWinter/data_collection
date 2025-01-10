@@ -71,10 +71,15 @@
 <body>
     <h1>DeviceMotion Sensor + Edge-ML</h1>
 
-    <!-- Form with text field for "Context" and a toggle for the sensor -->
+    <!-- Changed: Dropdown (select) for Context and a toggle for the sensor -->
     <div>
         <label><strong>Context:</strong></label>
-        <input type="text" id="contextInput" placeholder="e.g. walking, sitting, etc." />
+        <select id="contextSelect">
+            <option value="sitting">Sitting</option>
+            <option value="standing">Standing</option>
+            <option value="walking">Walking</option>
+        </select>
+
         <label class="switch">
             <input type="checkbox" id="toggleSensor">
             <span class="slider round"></span>
@@ -107,21 +112,21 @@
         // DOM references
         const toggleSensor = document.getElementById('toggleSensor');
         const outputDiv = document.getElementById('output');
-        const contextInput = document.getElementById('contextInput');
+        const contextSelect = document.getElementById('contextSelect'); // <-- New dropdown reference
         const apiKeyInput = document.getElementById('apiKey');
         const recordBtn = document.getElementById('recordBtn');
 
-        // Request 
+        // Request iOS permission (if needed)
         function requestOrientationPermission() {
             DeviceMotionEvent.requestPermission()
                 .then(response => {
                     if (response == 'granted') {
                         window.addEventListener('deviceorientation', (e) => {
-                            // do something with e
-                        })
+                            // handle event
+                        });
                     }
                 })
-                .catch(console.error)
+                .catch(console.error);
         }
 
         // Toggle switch to enable/disable 'devicemotion'
@@ -134,7 +139,7 @@
                                 window.addEventListener("devicemotion", handleMotionEvent);
                             }
                         })
-                        .catch(console.error)
+                        .catch(console.error);
                 } else {
                     window.addEventListener("devicemotion", handleMotionEvent);
                 }
@@ -154,7 +159,8 @@
                 acc = { x: 0, y: 0, z: 0 };
             }
 
-            const contextVal = contextInput.value.trim() || "unknown";
+            // Use the dropdown value instead of text input
+            const contextVal = contextSelect.value;
 
             // Display sensor data
             outputDiv.textContent =
@@ -171,7 +177,7 @@
                     collector.addDataPoint(now, "accX", acc.x || 0);
                     collector.addDataPoint(now, "accY", acc.y || 0);
                     collector.addDataPoint(now, "accZ", acc.z || 0);
-                    collector.addDataPoint(now, "label", contextVal)
+                    collector.addDataPoint(now, "label", contextVal);
                 } catch (err) {
                     console.log("Error adding data point:", err);
                 }
@@ -203,13 +209,13 @@
                 // Create new datasetCollector
                 try {
                     collector = await datasetCollector(
-                        "https://app.edge-ml.org",              // backend URL
-                        "f4b5f2cc43c1e124e11cb8505a3d6aff",     // Device/API key
-                        "Css Dataset",                          // Dataset name
-                        false,                                  // custom timestamps if false
-                        ["accX", "accY", "accZ", "label"],               // Name of the time-series to create in the dataset
-                        {},                                     // metadata (optional)
-                        "labeling_label"                        // label
+                        "https://app.edge-ml.org",    // backend URL
+                        "f4b5f2cc43c1e124e11cb8505a3d6aff", // Device/API key
+                        "Css Dataset",               // Dataset name
+                        false,                       // custom timestamps if false
+                        ["accX", "accY", "accZ", "label"], // time-series in dataset
+                        {},                          // metadata (optional)
+                        "labeling_label"            // label
                     );
                     isRecording = true;
                     recordBtn.textContent = "Stop recording";
