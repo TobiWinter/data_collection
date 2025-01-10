@@ -127,12 +127,17 @@
         // Toggle switch to enable/disable 'devicemotion'
         toggleSensor.addEventListener('change', (event) => {
             if (event.target.checked) {
-                DeviceMotionEvent.requestPermission().then(response => {
-                    if (response == 'granted') {
-                        window.addEventListener('deviceorientation', handleMotionEvent);
-                        isListening = true;
-                    }
-                }).catch(console.error)
+                if (typeof (DeviceMotionEvent.requestPermission) === "function") {
+                    DeviceMotionEvent.requestPermission()
+                        .then(response => {
+                            if (response == "granted") {
+                                window.addEventListener("devicemotion", handleMotionEvent);
+                            }
+                        })
+                        .catch(console.error)
+                } else {
+                    window.addEventListener("devicemotion", handleMotionEvent);
+                }
             } else {
                 window.removeEventListener('devicemotion', handleMotionEvent);
                 isListening = false;
